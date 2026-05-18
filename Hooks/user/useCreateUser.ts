@@ -1,10 +1,9 @@
 import { useMutation } from "@tanstack/react-query";
 import axios from "axios";
-import toast from "react-hot-toast";
 
-//  match your backend DTO
 export interface CreateUserDto {
-  name: string;
+  firstName: string;
+  lastName: string;
   email: string;
   phoneNumber: string;
   password: string;

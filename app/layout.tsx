@@ -3,6 +3,7 @@ import { Geist, Geist_Mono, Noto_Serif } from "next/font/google";
 import "./globals.css";
 import Nav from "@/components/Nav";
 import Providers from "./providers";
+import { AuthProvider } from "@/Context/auth/authContext";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -38,10 +39,12 @@ export default function RootLayout({
         className="min-h-full flex flex-col w-full"
         suppressHydrationWarning
       >
-        <Providers>
-          <Nav />
-          {children}
-        </Providers>
+        <AuthProvider>
+          <Providers>
+            <Nav />
+            {children}
+          </Providers>
+        </AuthProvider>
       </body>
     </html>
   );

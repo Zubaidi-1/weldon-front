@@ -5,7 +5,8 @@ type Props = {
   title: string;
   type?: string;
   register?: UseFormRegisterReturn;
-  disabled: boolean;
+  disabled?: boolean;
+  step?: string;
 };
 
 export default function Input({
@@ -14,12 +15,16 @@ export default function Input({
   type = "text",
   register,
   disabled,
+  step,
 }: Props) {
   return (
-    <div className="flex flex-col gap-1.5">
-      <label className="text-sm font-medium text-gray-700">{title}</label>
+    <div className="flex flex-col ">
+      <label className="mb-2 block text-sm font-medium text-[#334155]">
+        {title}
+      </label>
       <input
-        className="border border-gray-200 focus:border-[#0089d3] focus:ring-2 focus:ring-[#0089d3]/20 outline-none transition-all px-3 py-2 rounded-lg text-gray-800 placeholder-gray-400"
+        step={step ?? undefined}
+        className="w-full rounded-xl  border border-[#CBD5E1] px-4 py-3 text-sm outline-none transition focus:border-[#0089D3] focus:ring-4 focus:ring-[#0089D3]/10 text-gray-700"
         placeholder={placeholder}
         type={type}
         disabled={disabled}

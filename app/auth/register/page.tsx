@@ -8,6 +8,7 @@ import { useForm } from "react-hook-form";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { Button } from "@/components/shared/ui/CtaBtn";
+import axios from "axios";
 
 export default function Register() {
   const router = useRouter();
@@ -26,7 +27,8 @@ export default function Register() {
   const onSubmit = (data: RegisterType) => {
     const payload = {
       email: data.email,
-      name: data.name,
+      firstName: data.firstName,
+      lastName: data.lastName,
       phoneNumber: data.phoneNumber,
       password: data.password,
     };
@@ -39,21 +41,21 @@ export default function Register() {
 
         router.push("/auth/register/verify");
       },
-      onError: (error: any) => {
-        toast.error(
-          error.response?.data?.message
-            ? error.response?.data?.message
-            : error.message
-              ? error.message
-              : "An error has occured",
-        );
+      onError: (error: unknown) => {
+        const message = axios.isAxiosError(error)
+          ? error.response?.data?.message || error.message
+          : error instanceof Error
+            ? error.message
+            : "An error has occured";
+
+        toast.error(Array.isArray(message) ? message.join(", ") : message);
       },
     });
   };
 
   return (
     <div className="min-h-screen bg-white flex items-center justify-center px-4 sm:px-6">
-      <div className="w-full max-w-md border border-gray-200 rounded-2xl p-6 sm:p-8">
+      <div className="w-full max-w-md border border-gray-200 rounded-2xl p-6 sm:p-8 animate-fade-right">
         <form
           onSubmit={handleSubmit(onSubmit)}
           className="flex flex-col gap-5 sm:gap-6"
@@ -86,18 +88,34 @@ export default function Register() {
             </div>
 
             {/* Name */}
-            <div className="flex flex-col gap-1">
-              <Input
-                title="Name"
-                placeholder="John Doe"
-                register={register("name")}
-                disabled={isPending}
-              />
-              {errors.name && (
-                <span className="text-red-500 text-xs sm:text-sm">
-                  {errors.name.message}
-                </span>
-              )}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="flex flex-col gap-1">
+                <Input
+                  title="First Name"
+                  placeholder="John"
+                  register={register("firstName")}
+                  disabled={isPending}
+                />
+                {errors.firstName && (
+                  <span className="text-red-500 text-xs sm:text-sm">
+                    {errors.firstName.message}
+                  </span>
+                )}
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <Input
+                  title="Last Name"
+                  placeholder="Doe"
+                  register={register("lastName")}
+                  disabled={isPending}
+                />
+                {errors.lastName && (
+                  <span className="text-red-500 text-xs sm:text-sm">
+                    {errors.lastName.message}
+                  </span>
+                )}
+              </div>
             </div>
 
             {/* Phone Number */}

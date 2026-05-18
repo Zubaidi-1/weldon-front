@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 
 export default function Hero() {
   return (
@@ -37,9 +38,12 @@ export default function Hero() {
           natural glow.
         </p>
 
-        <button className="mt-7 sm:mt-8 w-full sm:w-auto px-6 py-3 rounded-xl bg-[#0089d3] text-white font-medium shadow-lg shadow-blue-500/30 hover:bg-blue-700 transition">
+        <Link
+          href={"/store"}
+          className="mt-7 sm:mt-8 w-full sm:w-auto px-6 py-3 rounded-xl bg-[#0089d3] text-white font-medium shadow-lg shadow-blue-500/30 hover:bg-blue-700 transition"
+        >
           Shop Now
-        </button>
+        </Link>
       </div>
     </div>
   );
