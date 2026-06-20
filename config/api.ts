@@ -35,7 +35,7 @@ export const apiFetch = async (
 
     if (!refreshRes.ok) {
       setAccessToken(null);
-      window.location.href = "/login";
+      window.location.href = "/auth/login";
       throw new Error("Session expired");
     }
 

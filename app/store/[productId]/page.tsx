@@ -2,30 +2,49 @@
 
 import { getAssetUrl } from "@/config/api";
 import { useAddToCart } from "@/Hooks/cart/useAddToCart";
+import { useGetActiveDiscounts } from "@/Hooks/discounts/useDiscounts";
 import { useGetAllProducts } from "@/Hooks/products/useGetAllProducts";
 import { getAvailableStock } from "@/lib/utils/productStock";
+import {
+  getPrimaryProductImage,
+  getProductImages,
+} from "@/lib/utils/productImages";
+import { formatProductSize } from "@/lib/utils/productSize";
+import { formatCategoryLabels } from "@/lib/utils/productCategories";
+import { ProductReviews } from "@/components/shared/dashboard/admin/products/Review";
+import {
+  getBestProductDiscount,
+  getDiscountLabel,
+} from "@/lib/utils/discounts";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";
 
-const formatLabel = (value: string) =>
-  value
-    .replaceAll("_", " ")
-    .toLowerCase()
-    .replace(/\b\w/g, (letter) => letter.toUpperCase());
-
 export default function StoreProductPage() {
   const params = useParams<{ productId: string }>();
   const { data, isLoading, isError } = useGetAllProducts();
+  const { data: activeDiscounts = [] } = useGetActiveDiscounts();
   const { mutate: addToCart, isPending } = useAddToCart();
   const [quantity, setQuantity] = useState(1);
+  const [selectedImage, setSelectedImage] = useState({
+    productId: 0,
+    image: "",
+  });
   const product = data?.find(
     (item) => item.productId === Number(params.productId),
   );
+  const productImages = product ? getProductImages(product) : [];
+  const primaryProductImage = product ? getPrimaryProductImage(product) : "";
+  const activeProductImage =
+    selectedImage.productId === product?.productId
+      ? selectedImage.image
+      : primaryProductImage;
   const availableStock = product ? getAvailableStock(product) : 0;
   const isInStock = availableStock > 0;
   const maxQuantity = Math.max(1, availableStock);
   const selectedQuantity = Math.min(Math.max(1, quantity), maxQuantity);
+  const sale = product ? getBestProductDiscount(product, activeDiscounts) : null;
+  const hasSale = Boolean(sale && sale.price < (product?.productPrice ?? 0));
 
   if (isLoading) {
     return (
@@ -55,7 +74,8 @@ export default function StoreProductPage() {
     );
   }
 
-  const totalPrice = product.productPrice * selectedQuantity;
+  const unitPrice = hasSale && sale ? sale.price : product.productPrice;
+  const totalPrice = unitPrice * selectedQuantity;
 
   const decreaseQuantity = () => {
     setQuantity((current) => Math.max(1, current - 1));
@@ -76,31 +96,103 @@ export default function StoreProductPage() {
         </Link>
 
         <div className="grid items-stretch gap-8 lg:grid-cols-[minmax(320px,0.9fr)_minmax(420px,1.1fr)]">
-          <div className="flex items-center justify-center rounded-2xl border border-[#D8EAF4] bg-white p-6 shadow-[0_10px_28px_rgba(15,23,42,0.08)] sm:p-8">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={getAssetUrl(product.productImage)}
-              alt={product.productName}
-              className="h-auto max-h-[440px] w-full max-w-[430px] object-contain"
-            />
+          <div className="flex flex-col gap-4 rounded-2xl border border-[#D8EAF4] bg-white p-6 shadow-[0_10px_28px_rgba(15,23,42,0.08)] sm:p-8">
+            <div className="flex min-h-[320px] items-center justify-center">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={getAssetUrl(activeProductImage)}
+                alt={product.productName}
+                className="h-auto max-h-[440px] w-full max-w-[430px] object-contain"
+              />
+            </div>
+
+            {productImages.length > 1 && (
+              <div className="grid grid-cols-4 gap-3 sm:grid-cols-5">
+                {productImages.map((image) => (
+                  <button
+                    key={image}
+                    type="button"
+                    onClick={() =>
+                      setSelectedImage({ productId: product.productId, image })
+                    }
+                    className={`aspect-square overflow-hidden rounded-xl border bg-[#F8FBFD] p-1 transition ${
+                      activeProductImage === image
+                        ? "border-[#0089D3] ring-2 ring-[#0089D3]/20"
+                        : "border-[#D8EAF4] hover:border-[#0089D3]/50"
+                    }`}
+                    aria-label={`View ${product.productName} image`}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={getAssetUrl(image)}
+                      alt={product.productName}
+                      className="h-full w-full rounded-lg object-cover"
+                    />
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           <section className="flex flex-col justify-center rounded-2xl border border-[#D8EAF4] bg-white p-6 text-center shadow-[0_10px_28px_rgba(15,23,42,0.06)] sm:p-8 lg:text-left">
             <p className="text-sm font-bold text-[#0089D3]">
-              {formatLabel(product.productCategory)}
+              {formatCategoryLabels(product.productCategory)}
             </p>
             <h1 className="mt-3 text-3xl font-bold leading-tight text-[#0F172A] sm:text-4xl">
               {product.productName}
             </h1>
 
+            <ProductReviews productId={product.productId} />
+
+            {product.productSubTitle && (
+              <p className="mt-3 text-base font-semibold text-[#334155]">
+                {product.productSubTitle}
+              </p>
+            )}
+
             <p className="mt-5 text-base leading-8 text-[#64748B]">
               {product.productDescription}
             </p>
 
+            <div className="mt-6 flex flex-wrap items-center justify-center gap-4 lg:justify-start">
+              <span className="rounded-full bg-[#F0F9FF] px-4 py-2 text-sm font-bold text-[#0089D3]">
+                {formatProductSize(product.productSize)}
+              </span>
+
+              {(product.productShades ?? []).length > 0 && (
+                <div className="flex flex-wrap items-center gap-2">
+                  {(product.productShades ?? []).map((shade) => (
+                    <span
+                      key={shade}
+                      className="h-6 w-6 rounded-full border border-[#CBD5E1]"
+                      style={{ backgroundColor: shade }}
+                      title={shade}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+
             <div className="mt-8 flex flex-col gap-4 border-y border-[#D8EAF4] py-6 sm:flex-row sm:items-center sm:justify-center lg:justify-between">
-              <p className="text-4xl font-extrabold text-[#0089D3]">
-                ${totalPrice.toFixed(2)}
-              </p>
+              <div>
+                {hasSale && sale && (
+                  <span className="mb-2 inline-flex rounded-full bg-[#FEE2E2] px-3 py-1 text-xs font-bold text-[#DC2626]">
+                    {getDiscountLabel(sale.discount)}
+                  </span>
+                )}
+                <p
+                  className={`text-4xl font-extrabold ${
+                    hasSale ? "text-[#DC2626]" : "text-[#0089D3]"
+                  }`}
+                >
+                  ${totalPrice.toFixed(2)}
+                </p>
+                {hasSale && (
+                  <p className="mt-1 text-sm font-bold text-[#94A3B8] line-through">
+                    ${(product.productPrice * selectedQuantity).toFixed(2)}
+                  </p>
+                )}
+              </div>
               <span className="mx-auto w-fit rounded-full bg-[#E6F6FD] px-4 py-2 text-sm font-bold text-[#0089D3] lg:mx-0">
                 {isInStock ? "In stock" : "Out of stock"}
               </span>
@@ -136,11 +228,11 @@ export default function StoreProductPage() {
             <button
               onClick={() =>
                 addToCart({
-                  price: product.productPrice,
+                  price: unitPrice,
                   productId: product.productId,
                   productName: product.productName,
                   productSize: product.productSize,
-                  productImage: product.productImage,
+                  productImage: primaryProductImage,
                   quantity: selectedQuantity,
                   maxQuantity,
                 })

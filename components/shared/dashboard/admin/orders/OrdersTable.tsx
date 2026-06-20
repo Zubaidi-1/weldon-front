@@ -50,7 +50,7 @@ export default function OrdersTable({
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[1200px] border-collapse">
+        <table className="w-full min-w-[1450px] border-collapse">
           <thead className="bg-[#F0F9FF]">
             <tr>
               <th className="px-6 py-4 text-left text-sm font-bold text-[#0089D3]">
@@ -112,31 +112,31 @@ export default function OrdersTable({
                   key={order.orderId}
                   className="transition hover:bg-[#F8FBFD]"
                 >
-                  <td className="px-6 py-4 text-sm font-bold text-[#0F172A]">
+                  <td className="whitespace-nowrap px-6 py-4 text-sm font-bold text-[#0F172A]">
                     #{order.orderId}
                   </td>
-                  <td className="px-6 py-4 text-sm font-semibold text-[#0F172A]">
+                  <td className="min-w-52 px-6 py-4 text-sm font-semibold text-[#0F172A]">
                     {order.orderFirstName} {order.orderLastName}
                     <span className="mt-1 block text-xs font-medium text-[#94A3B8]">
                       {order.userId ? `User #${order.userId}` : "Guest"}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-sm font-medium text-[#334155]">
+                  <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-[#334155]">
                     {order.orderPhoneNumber}
                   </td>
-                  <td className="px-6 py-4 text-sm font-medium text-[#334155]">
+                  <td className="min-w-60 px-6 py-4 text-sm font-medium text-[#334155]">
                     {order.orderEmail}
                   </td>
-                  <td className="px-6 py-4 text-sm font-medium text-[#334155]">
+                  <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-[#334155]">
                     {order.orderGovernate}
                   </td>
-                  <td className="px-6 py-4 text-sm font-medium text-[#334155]">
+                  <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-[#334155]">
                     {itemCount}
                   </td>
-                  <td className="px-6 py-4 text-sm font-bold text-[#0089D3]">
+                  <td className="whitespace-nowrap px-6 py-4 text-sm font-bold text-[#0089D3]">
                     ${total.toFixed(2)}
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="whitespace-nowrap px-6 py-4">
                     {onStatusChange ? (
                       <select
                         value={order.orderStatus}
@@ -163,7 +163,7 @@ export default function OrdersTable({
                       </span>
                     )}
                   </td>
-                  <td className="px-6 py-4 text-sm font-medium text-[#334155]">
+                  <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-[#334155]">
                     {formatDate(order.createdAt)}
                   </td>
                 </tr>

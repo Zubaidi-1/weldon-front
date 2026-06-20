@@ -1,30 +1,48 @@
 import z from "zod";
+
+const productImageSchema = z
+  .file()
+  .max(20_000_000)
+  .mime(["image/png", "image/jpeg", "image/webp"]);
+
+const productCategorySchema = z.enum([
+  "MELA_WHITE",
+  "ESSENTIAL",
+  "HYDRATING",
+  "REGULATING",
+  "SENSITIVE",
+  "GREEN_PEEL",
+  "BEAUTY_ELEMENTS",
+  "VITALITY",
+  "BODY_SCIENCE",
+  "BODY_CARE",
+  "HAIR",
+  "MEN",
+  "NIGHT_CARE",
+  "AMPOULE",
+  "DRY_SKIN",
+]);
+
 export const AddProductSchema = z.object({
   productName: z
     .string()
     .min(3, "Product Name must be at least 3 charachters")
     .max(70, "Product Name must be 70 charachters at max"),
 
+  productSubTitle: z
+    .string()
+    .max(160, "Product subtitle must be 160 characters at max")
+    .optional()
+    .or(z.literal("")),
+
   stockQuantity: z
     .number("Please provide Product Stock")
     .min(0, "Product Stock can not be less than 0")
     .max(999999, "Product max quantity is 999999"),
 
-  productCategory: z.enum(
-    [
-      "MELA_WHITE",
-      "ESSENTIAL",
-      "HYDRATING",
-      "REGULATING",
-      "SENSITIVE",
-      "BEAUTY_ELEMENTS",
-      "VITALITY",
-      "BODY_SCIENCE",
-      "HAIR",
-      "MEN",
-    ],
-    { message: "Please select a category" },
-  ),
+  productCategory: z
+    .array(productCategorySchema, "Please select a category")
+    .min(1, "Please select at least one category"),
 
   productStatus: z.enum(["ACTIVE", "OUT_OF_STOCK", "DRAFT"], {
     message: "Please select a status",
@@ -51,18 +69,26 @@ export const AddProductSchema = z.object({
     .min(20, "Product description must be at least 20 charachters")
     .max(2000, "Product description must be 2000 charachters at max"),
 
-  productImage: z
-    .file("Please upload an image")
-    .max(20_000_000)
-    .mime(["image/png", "image/jpeg", "image/webp"]), // only accept png, jpeg and webp, max file size is 20MB
+  productImages: z
+    .array(productImageSchema, "Please upload at least one image")
+    .min(1, "Please upload at least one image")
+    .max(10, "You can upload up to 10 images"),
+
+  productShades: z
+    .string()
+    .max(400, "Product shades must be 400 characters at max")
+    .optional()
+    .or(z.literal("")),
 });
 
-export const EditProductSchema = AddProductSchema.extend({
-  productImage: z
-    .file()
-    .max(20_000_000)
-    .mime(["image/png", "image/jpeg", "image/webp"])
+export const EditProductSchema = AddProductSchema.omit({
+  productImages: true,
+}).extend({
+  productImages: z
+    .array(productImageSchema)
+    .max(10, "You can upload up to 10 images")
     .optional(),
+  imagesToDelete: z.array(z.string()).optional(),
 });
 
 export type AddProductType = z.infer<typeof AddProductSchema>;

@@ -32,6 +32,12 @@ export const CheckoutSchema = z.object({
     .trim()
     .min(5, "Address must be at least five characters")
     .max(200, "Address must be 200 characters at max"),
+  couponCode: z
+    .string()
+    .trim()
+    .toUpperCase()
+    .max(32, "Coupon code must be 32 characters at max")
+    .optional(),
 });
 
 export type CheckoutType = z.infer<typeof CheckoutSchema>;

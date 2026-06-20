@@ -14,6 +14,7 @@ const guestUser: GetMeResponse = {
   lastName: null,
   name: null,
   roleName: "GUEST",
+  isBanned: false,
   cartProductsCount: 0,
 };
 

@@ -5,11 +5,6 @@ const apiUrl = new URL(
 );
 
 const nextConfig: NextConfig = {
-  /* config options here */
-  i18n: {
-    locales: ["en", "ar"],
-    defaultLocale: "en",
-  },
   images: {
     remotePatterns: [
       {

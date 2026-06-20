@@ -13,6 +13,7 @@ export type CreateOrderPayload = {
   orderLastName: string;
   orderGovernate: string;
   orderAddress: string;
+  couponCode?: string;
   products?: {
     productId: number;
     productName: string;

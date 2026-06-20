@@ -9,10 +9,11 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useSigninUser } from "@/Hooks/user/useSignIn";
 import type { GetMeResponse } from "@/Hooks/user/useGetMe";
 import toast from "react-hot-toast";
-import { redirect, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/Context/auth/authContext";
 import { useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
+import Link from "next/link";
 
 export default function Login() {
   const router = useRouter();
@@ -41,7 +42,22 @@ export default function Login() {
         setAccessToken(response.accessToken);
         queryClient.setQueryData<GetMeResponse>(["get-me"], response.user);
         toast.success("signed in successfully");
-        redirect("/store");
+        const redirectTo = new URLSearchParams(window.location.search).get(
+          "redirectTo",
+        );
+        const safeRedirect =
+          redirectTo?.startsWith("/") && !redirectTo.startsWith("//")
+            ? redirectTo
+            : null;
+        const isAdminRoute =
+          safeRedirect?.startsWith("/admin") ||
+          safeRedirect?.startsWith("/dashboard/admin");
+
+        router.replace(
+          safeRedirect && (!isAdminRoute || response.user.roleName === "ADMIN")
+            ? safeRedirect
+            : "/store",
+        );
         reset();
       },
       onError: (error: unknown) => {
@@ -104,6 +120,12 @@ export default function Login() {
                   {errors.password.message}
                 </span>
               )}
+              <Link
+                href="/auth/forgot-password"
+                className="mt-1 self-end text-xs sm:text-sm text-[#0089d3] hover:underline"
+              >
+                Forgot password?
+              </Link>
             </div>
           </div>
 

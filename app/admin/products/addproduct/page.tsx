@@ -17,6 +17,8 @@ import {
 import { useCreateProduct } from "@/Hooks/products/useCreateProduct";
 import InputError from "@/components/shared/ui/InputError";
 import Link from "next/link";
+import { useState } from "react";
+import { parseProductShades } from "@/lib/utils/productShades";
 
 export default function CreateProductForm() {
   const { mutate, isPending } = useCreateProduct();
@@ -27,16 +29,42 @@ export default function CreateProductForm() {
     setValue,
     handleSubmit,
     control,
+    reset,
     formState: { errors },
   } = useForm<AddProductType>({
     resolver: zodResolver(AddProductSchema),
   });
-  const selectedCategory = useWatch({ control, name: "productCategory" });
+  const [fileInputKey, setFileInputKey] = useState(0);
+  const selectedCategories =
+    useWatch({ control, name: "productCategory" }) ?? [];
   const selectedStatus = useWatch({ control, name: "productStatus" });
 
+  const toggleCategory = (category: ProductCategory) => {
+    const nextCategories = selectedCategories.includes(category)
+      ? selectedCategories.filter((item) => item !== category)
+      : [...selectedCategories, category];
+
+    setValue("productCategory", nextCategories, {
+      shouldValidate: true,
+      shouldDirty: true,
+      shouldTouch: true,
+    });
+  };
+
   // Form submission
-  const onSubmit = (data: CreateProductDto) => {
-    mutate(data);
+  const onSubmit = (data: AddProductType) => {
+    const productData: CreateProductDto = {
+      ...data,
+      productSubTitle: data.productSubTitle || undefined,
+      productShades: parseProductShades(data.productShades),
+    };
+
+    mutate(productData, {
+      onSuccess: () => {
+        reset();
+        setFileInputKey((key) => key + 1);
+      },
+    });
   };
   return (
     <div className="min-h-screen w-full flex justify-center items-center bg-white animate-fade-right">
@@ -67,21 +95,45 @@ export default function CreateProductForm() {
             )}
           </div>
 
-          <div>
+          <div className="flex flex-col gap-1">
+            <Input
+              register={register("productSubTitle")}
+              title="Product Subtitle"
+              type="text"
+              placeholder="Brightening night cream"
+            />
+            {errors.productSubTitle?.message && (
+              <InputError errorMessage={errors.productSubTitle.message} />
+            )}
+          </div>
+
+          <div className="md:col-span-2">
             <div className="w-full flex flex-col gap-1">
-              <CustomSelect<ProductCategory>
-                label="Category"
-                placeholder="Choose category"
-                options={categoryOptions}
-                value={selectedCategory}
-                onChange={(value) =>
-                  setValue("productCategory", value, {
-                    shouldValidate: true,
-                    shouldDirty: true,
-                    shouldTouch: true,
-                  })
-                }
-              />
+              <p className="mb-2 block text-sm font-medium text-[#334155]">
+                Categories
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {categoryOptions.map((category) => {
+                  const isSelected = selectedCategories.includes(
+                    category.value,
+                  );
+
+                  return (
+                    <button
+                      key={category.value}
+                      type="button"
+                      onClick={() => toggleCategory(category.value)}
+                      className={`rounded-full border px-3 py-2 text-sm font-semibold transition ${
+                        isSelected
+                          ? "border-[#0089D3] bg-[#0089D3] text-white"
+                          : "border-[#CBD5E1] bg-white text-[#475569] hover:border-[#0089D3] hover:bg-[#F0F9FF]"
+                      }`}
+                    >
+                      {category.label}
+                    </button>
+                  );
+                })}
+              </div>
               {errors.productCategory?.message && (
                 <InputError errorMessage={errors.productCategory.message} />
               )}
@@ -156,28 +208,42 @@ export default function CreateProductForm() {
             )}
           </div>
 
+          <div className="flex flex-col gap-1">
+            <Input
+              register={register("productShades")}
+              title="Product Shades"
+              type="text"
+              placeholder="#f4e7dd, #d8b99d, #7a513c"
+            />
+            {errors.productShades?.message && (
+              <InputError errorMessage={errors.productShades.message} />
+            )}
+          </div>
+
           <div className="md:col-span-2">
             <label className="mb-2 block text-sm font-medium text-[#334155]">
-              Product Image
+              Product Images
             </label>
             <input
+              key={fileInputKey}
               onChange={(e) => {
-                const file = e.target.files?.[0];
+                const files = Array.from(e.target.files ?? []);
 
-                if (!file) return;
+                if (files.length === 0) return;
 
-                setValue("productImage", file, {
+                setValue("productImages", files, {
                   shouldValidate: true,
                   shouldDirty: true,
                   shouldTouch: true,
                 });
               }}
               type="file"
+              multiple
               accept="image/*"
               className="w-full cursor-pointer rounded-xl border border-dashed border-[#0089D3]/40 bg-[#F8FBFD] px-4 py-4 text-sm text-[#64748B] outline-none file:mr-4 file:rounded-lg file:border-0 file:bg-[#0089D3] file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:bg-[#F1F9FD]"
             />
-            {errors.productImage?.message && (
-              <InputError errorMessage={errors.productImage.message} />
+            {errors.productImages?.message && (
+              <InputError errorMessage={errors.productImages.message} />
             )}
           </div>
 

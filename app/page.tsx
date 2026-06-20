@@ -2,7 +2,14 @@ import Brand from "@/components/shared/Landing/Brand";
 import Footer from "@/components/shared/Landing/Footer";
 import GreenPeel from "@/components/shared/Landing/GreenPeel";
 import Hero from "@/components/shared/Landing/Hero";
+import { createPageMetadata } from "@/lib/seo";
 
+export const metadata = createPageMetadata({
+  title: "Professional German Skincare in Jordan",
+  description:
+    "Discover Dr. Schrammek Jordan skincare, Green Peel treatments, sensitive skin solutions, hydrating products, ampoules, and professional German skin care.",
+  path: "/",
+});
 
 export default function Home() {
   return (

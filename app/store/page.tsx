@@ -1,23 +1,35 @@
 "use client";
 
 import ProductStoreCard from "@/components/shared/dashboard/admin/products/ProductsStoreCard";
+import { useGetActiveDiscounts } from "@/Hooks/discounts/useDiscounts";
 import { useGetAllProducts } from "@/Hooks/products/useGetAllProducts";
 import { categoryOptions } from "@/lib/options/options";
 import { ProductCategory } from "@/lib/types/ProductTypes";
+import { getDiscountLabel, getDiscountTargetLabel } from "@/lib/utils/discounts";
+import {
+  formatCategoryLabels,
+  getProductCategories,
+} from "@/lib/utils/productCategories";
 import { isProductInStock } from "@/lib/utils/productStock";
+import { getFeaturedSaleDiscounts } from "@/lib/utils/discounts";
 import { useMemo, useState } from "react";
 
-const pageSize = 9;
+const pageSize = 6;
 
 type CategoryFilter = ProductCategory | "ALL";
 type StockFilter = "ALL" | "IN_STOCK" | "OUT_OF_STOCK";
 
 export default function StorePage() {
   const { data, isLoading, isError } = useGetAllProducts();
+  const { data: activeDiscounts = [] } = useGetActiveDiscounts();
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>("ALL");
   const [stockFilter, setStockFilter] = useState<StockFilter>("ALL");
   const [currentPage, setCurrentPage] = useState(1);
+  const featuredDiscounts = useMemo(
+    () => getFeaturedSaleDiscounts(activeDiscounts),
+    [activeDiscounts],
+  );
 
   const filteredProducts = useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLowerCase();
@@ -30,8 +42,10 @@ export default function StorePage() {
 
         return [
           product.productName,
+          product.productSubTitle,
           product.productDescription,
-          product.productCategory.replaceAll("_", " "),
+          formatCategoryLabels(product.productCategory),
+          (product.productShades ?? []).join(" "),
           product.productSku,
         ]
           .join(" ")
@@ -41,7 +55,9 @@ export default function StorePage() {
       .filter(
         (product) =>
           categoryFilter === "ALL" ||
-          product.productCategory === categoryFilter,
+          getProductCategories(product.productCategory).includes(
+            categoryFilter,
+          ),
       )
       .filter((product) => {
         if (stockFilter === "ALL") return true;
@@ -94,8 +110,8 @@ export default function StorePage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#F8FBFD] px-4 py-8 sm:px-6 lg:px-8 flex justify-center items-center animate-fade-right">
-      <div className="mx-auto flex w-full max-w-7xl flex-col gap-8">
+    <main className="min-h-screen bg-[#F8FBFD] px-4 pb-12 pt-24 sm:px-6 md:pt-28 lg:px-8 lg:pt-32 flex justify-center items-start animate-fade-right">
+      <div className="mx-auto flex w-full max-w-7xl flex-col gap-8 ">
         <header className="flex flex-col gap-5 border-b border-[#D8EAF4] pb-7 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <p className="text-sm font-semibold text-[#0089D3]">Store</p>
@@ -117,6 +133,39 @@ export default function StorePage() {
             />
           </div>
         </header>
+
+        {featuredDiscounts.length > 0 && (
+          <section className="rounded-2xl border border-[#F7C6C6] bg-white p-5 shadow-[0_10px_28px_rgba(220,38,38,0.08)]">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <p className="text-sm font-bold text-[#DC2626]">
+                  Active Sales
+                </p>
+                <h2 className="mt-1 text-2xl font-bold text-[#0F172A]">
+                  Save on selected skincare
+                </h2>
+              </div>
+              <div className="flex gap-3 overflow-x-auto pb-1">
+                {featuredDiscounts.map((discount) => (
+                  <div
+                    key={discount.discountId}
+                    className="min-w-56 rounded-xl bg-[#FFF7F7] p-4"
+                  >
+                    <p className="text-sm font-bold text-[#0F172A]">
+                      {discount.name}
+                    </p>
+                    <p className="mt-1 text-lg font-extrabold text-[#DC2626]">
+                      {getDiscountLabel(discount)}
+                    </p>
+                    <p className="mt-1 truncate text-xs font-semibold text-[#64748B]">
+                      {getDiscountTargetLabel(discount)}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
 
         <div className="grid gap-6 lg:grid-cols-[260px_1fr]">
           <aside className="h-fit rounded-2xl border border-[#D8EAF4] bg-white p-5 shadow-[0_10px_28px_rgba(15,23,42,0.06)]">
@@ -209,7 +258,11 @@ export default function StorePage() {
             {paginatedProducts.length > 0 ? (
               <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
                 {paginatedProducts.map((product) => (
-                  <ProductStoreCard key={product.productId} product={product} />
+                  <ProductStoreCard
+                    key={product.productId}
+                    product={product}
+                    discounts={activeDiscounts}
+                  />
                 ))}
               </div>
             ) : (

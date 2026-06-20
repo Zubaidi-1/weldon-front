@@ -34,15 +34,17 @@ export default function AdminDashboardPage() {
   const pendingOrders = orders.filter(
     (order) => order.orderStatus === "PENDING",
   );
-  const revenue = orders.reduce(
-    (sum, order) =>
-      sum +
-      order.products.reduce(
-        (orderSum, product) => orderSum + product.lineTotal,
-        0,
-      ),
-    0,
-  );
+  const revenue = orders
+    .filter((order) => order.orderStatus !== "CANCELLED" && !order.canceled)
+    .reduce(
+      (sum, order) =>
+        sum +
+        order.products.reduce(
+          (orderSum, product) => orderSum + product.lineTotal,
+          0,
+        ),
+      0,
+    );
 
   if (isLoading) {
     return (
@@ -91,6 +93,18 @@ export default function AdminDashboardPage() {
             >
               Orders
             </Link>
+            <Link
+              href="/admin/users"
+              className="inline-flex h-11 items-center justify-center rounded-xl border border-[#CBD5E1] bg-white px-4 text-sm font-bold text-[#475569] transition hover:bg-[#F8FBFD]"
+            >
+              Users
+            </Link>
+            <Link
+              href="/admin/discounts"
+              className="inline-flex h-11 items-center justify-center rounded-xl border border-[#CBD5E1] bg-white px-4 text-sm font-bold text-[#475569] transition hover:bg-[#F8FBFD]"
+            >
+              Discounts
+            </Link>
           </div>
         </header>
 
@@ -132,13 +146,32 @@ export default function AdminDashboardPage() {
             title="Recent Revenue"
             value={`$${revenue.toFixed(2)}`}
             badgeText="Sales"
-            description="Gross value from the latest loaded orders."
+            description="Gross value from the latest loaded non-cancelled orders."
             buttonText="Open orders"
             onClick={() => {
               router.push("/admin/orders");
             }}
             variant="green"
           />
+        </section>
+
+        <section className="rounded-2xl border border-[#D8EAF4] bg-white p-5 shadow-[0_10px_28px_rgba(15,23,42,0.06)]">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-xl font-bold text-[#0F172A]">
+                Discounts
+              </h2>
+              <p className="mt-1 text-sm text-[#64748B]">
+                Manage sales and send customer reminders.
+              </p>
+            </div>
+            <Link
+              href="/admin/discounts"
+              className="inline-flex h-11 items-center justify-center rounded-xl bg-[#0089D3] px-4 text-sm font-bold text-white transition hover:bg-[#007BBE]"
+            >
+              Manage discounts
+            </Link>
+          </div>
         </section>
       </div>
     </main>

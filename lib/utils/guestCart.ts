@@ -24,6 +24,13 @@ export const getGuestCartCount = () => {
   return getGuestCartItems().reduce((total, item) => total + item.quantity, 0);
 };
 
+export const setGuestCartItems = (items: CartProduct[]) => {
+  if (typeof window === "undefined") return;
+
+  localStorage.setItem(guestCartKey, JSON.stringify(items));
+  window.dispatchEvent(new Event(guestCartUpdatedEvent));
+};
+
 export const addGuestCartItem = (item: GuestCartInput) => {
   const cartItems = getGuestCartItems();
   const existingItem = cartItems.find(
@@ -51,8 +58,7 @@ export const addGuestCartItem = (item: GuestCartInput) => {
       )
     : [...cartItems, cartItem];
 
-  localStorage.setItem(guestCartKey, JSON.stringify(updatedCart));
-  window.dispatchEvent(new Event(guestCartUpdatedEvent));
+  setGuestCartItems(updatedCart);
 
   return updatedCart;
 };
@@ -91,8 +97,7 @@ export const updateGuestCartItemQuantity = (
     })
     .filter((item) => item.quantity > 0);
 
-  localStorage.setItem(guestCartKey, JSON.stringify(updatedCart));
-  window.dispatchEvent(new Event(guestCartUpdatedEvent));
+  setGuestCartItems(updatedCart);
 
   return updatedCart;
 };

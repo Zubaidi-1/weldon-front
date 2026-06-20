@@ -9,11 +9,16 @@ export const categoryOptions: {
   { label: "Hydrating", value: "HYDRATING" },
   { label: "Regulating", value: "REGULATING" },
   { label: "Sensitive", value: "SENSITIVE" },
+  { label: "Green Peel", value: "GREEN_PEEL" },
   { label: "Beauty Elements", value: "BEAUTY_ELEMENTS" },
   { label: "Vitality", value: "VITALITY" },
   { label: "Body Science", value: "BODY_SCIENCE" },
+  { label: "Body Care", value: "BODY_CARE" },
   { label: "Hair", value: "HAIR" },
   { label: "Men", value: "MEN" },
+  { label: "Night Care", value: "NIGHT_CARE" },
+  { label: "Ampoule", value: "AMPOULE" },
+  { label: "Dry Skin", value: "DRY_SKIN" },
 ];
 
 export const statusOptions: {

@@ -1,4 +1,5 @@
 import MobileLink from "./Link";
+import { useLanguage } from "@/Context/language/languageContext";
 
 type Props = {
   onClose?: () => void;
@@ -6,6 +7,8 @@ type Props = {
 };
 
 export default function MobileSideBar({ onClose, isClosing }: Props) {
+  const { t } = useLanguage();
+
   return (
     <div className="fixed inset-0 z-50 animate-fade-right">
       {/* Overlay */}
@@ -24,22 +27,22 @@ export default function MobileSideBar({ onClose, isClosing }: Props) {
       >
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
-          <span className="text-xl font-semibold">Menu</span>
-          <button onClick={onClose} className="text-2xl">
+          <span className="text-xl font-semibold">{t("nav.menu")}</span>
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-2xl"
+            aria-label={t("nav.close")}
+          >
             ✕
           </button>
         </div>
 
         {/* Links */}
         <nav className="flex flex-col">
-          <MobileLink href="/" title="Home" />
-          <MobileLink href="/new-arrivals" title="New Arrivals" />
-          <MobileLink href="/bundles" title="Bundles & Value Sets" />
-          <MobileLink href="/shop" title="Shop" />
-          <MobileLink href="/equipment" title="Equipment" />
-          <MobileLink href="/contact" title="Contact" />
-          <MobileLink href="/careers" title="Careers" />
-          <MobileLink href="/blogs" title="Blogs" />
+          <MobileLink href="/" title={t("nav.home")} />
+          <MobileLink href="/store" title={t("nav.store")} />
+          <MobileLink href="/contact" title={t("nav.contact")} />
         </nav>
       </div>
     </div>

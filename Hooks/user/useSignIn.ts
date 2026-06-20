@@ -15,6 +15,7 @@ export type SigninResponse = {
     lastName: string;
     name: string;
     roleName: string;
+    isBanned: boolean;
     cartProductsCount: number;
   };
 };

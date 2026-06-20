@@ -1,11 +1,15 @@
 "use client";
 
 import { getApiUrl } from "@/config/api";
-import type { CartProduct } from "@/lib/types/ProductTypes";
+import type { Discount } from "@/lib/types/DiscountTypes";
+import type { CartProduct, Product } from "@/lib/types/ProductTypes";
+import { getBestProductDiscount } from "@/lib/utils/discounts";
 import {
   getGuestCartItems,
   guestCartUpdatedEvent,
+  setGuestCartItems,
 } from "@/lib/utils/guestCart";
+import { getPrimaryProductImage } from "@/lib/utils/productImages";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { useApi } from "../api/useApi";
@@ -39,6 +43,39 @@ const buildGuestCart = (items: CartProduct[]): CartView => {
   };
 };
 
+const refreshGuestCartItems = (
+  items: CartProduct[],
+  products?: Product[],
+  discounts: Discount[] = [],
+): CartProduct[] => {
+  if (!products?.length) return items;
+
+  const productsById = new Map(
+    products.map((product) => [product.productId, product]),
+  );
+
+  return items
+    .map((item) => {
+      const product = productsById.get(item.productId);
+      if (!product) return item;
+
+      const maxQuantity = Math.max(0, product.stockQuantity - 5);
+
+      return {
+        ...item,
+        productName: product.productName,
+        productImage: getPrimaryProductImage(product),
+        productSize: product.productSize,
+        price:
+          getBestProductDiscount(product, discounts)?.price ??
+          product.productPrice,
+        maxQuantity,
+        quantity: Math.min(item.quantity, maxQuantity),
+      };
+    })
+    .filter((item) => item.quantity > 0);
+};
+
 export const useCart = () => {
   const api = useApi();
   const { data: user } = useGetMe();
@@ -70,7 +107,50 @@ export const useCart = () => {
     },
   });
 
-  const guestCart = useMemo(() => buildGuestCart(guestItems), [guestItems]);
+  const productsQuery = useQuery<Product[]>({
+    queryKey: ["all-products"],
+    enabled: !isSignedIn && guestItems.length > 0,
+    queryFn: async () => {
+      const response = await api(getApiUrl("/product/all-products"));
+
+      return response as Product[];
+    },
+  });
+
+  const activeDiscountsQuery = useQuery<Discount[]>({
+    queryKey: ["discounts", "active"],
+    enabled: !isSignedIn && guestItems.length > 0,
+    queryFn: async () => {
+      const response = await api(getApiUrl("/discounts/active"));
+
+      return response as Discount[];
+    },
+  });
+
+  useEffect(() => {
+    if (isSignedIn || !productsQuery.data) return;
+
+    const refreshedItems = refreshGuestCartItems(
+      guestItems,
+      productsQuery.data,
+      activeDiscountsQuery.data,
+    );
+    if (JSON.stringify(refreshedItems) === JSON.stringify(guestItems)) return;
+
+    setGuestCartItems(refreshedItems);
+  }, [activeDiscountsQuery.data, guestItems, isSignedIn, productsQuery.data]);
+
+  const guestCart = useMemo(
+    () =>
+      buildGuestCart(
+        refreshGuestCartItems(
+          guestItems,
+          productsQuery.data,
+          activeDiscountsQuery.data,
+        ),
+      ),
+    [activeDiscountsQuery.data, guestItems, productsQuery.data],
+  );
 
   return {
     cart: isSignedIn ? userCartQuery.data : guestCart,

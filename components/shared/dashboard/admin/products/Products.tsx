@@ -12,6 +12,9 @@ import {
   ProductStatus,
   UpdateProductDto,
 } from "@/lib/types/ProductTypes";
+import { getProductImages } from "@/lib/utils/productImages";
+import { parseProductShades } from "@/lib/utils/productShades";
+import { getProductCategories } from "@/lib/utils/productCategories";
 import {
   EditProductSchema,
   EditProductType,
@@ -50,30 +53,43 @@ export default function EditProductModal({
   } = useForm<EditProductType>({
     resolver: zodResolver(EditProductSchema),
   });
-  const selectedCategory = useWatch({ control, name: "productCategory" });
+  const selectedCategories =
+    useWatch({ control, name: "productCategory" }) ?? [];
   const selectedStatus = useWatch({ control, name: "productStatus" });
+  const selectedProductImages =
+    useWatch({ control, name: "productImages" }) ?? [];
+  const imagesToDelete = useWatch({ control, name: "imagesToDelete" }) ?? [];
 
   useEffect(() => {
-    if (!product) return;
+    if (!open || !product) return;
 
-    reset({
-      productName: product.productName,
-      productCategory: product.productCategory,
-      productStatus: product.productStatus,
-      productDescription: product.productDescription,
-      productPrice: Number(product.productPrice),
-      productSize: Number(product.productSize),
-      stockQuantity: Number(product.stockQuantity),
-      productSku: product.productSku,
-      productImage: undefined,
-    });
-  }, [product, reset]);
+      reset({
+        productName: product.productName,
+        productSubTitle: product.productSubTitle ?? "",
+        productCategory: getProductCategories(product.productCategory),
+        productStatus: product.productStatus,
+        productDescription: product.productDescription,
+        productPrice: Number(product.productPrice),
+        productSize: Number(product.productSize),
+        stockQuantity: Number(product.stockQuantity),
+        productSku: product.productSku,
+        productImages: undefined,
+        productShades: (product.productShades ?? []).join(", "),
+        imagesToDelete: [],
+      });
+  }, [open, product, reset]);
 
   if (!product) return null;
 
-  const onSubmit = (data: UpdateProductDto) => {
+  const onSubmit = (data: EditProductType) => {
+    const productData: UpdateProductDto = {
+      ...data,
+      productSubTitle: data.productSubTitle || undefined,
+      productShades: parseProductShades(data.productShades),
+    };
+
     mutate(
-      { productId: product.productId, data },
+      { productId: product.productId, data: productData },
       {
         onSuccess: (updatedProduct) => {
           toast.success("Product updated successfully");
@@ -105,6 +121,43 @@ export default function EditProductModal({
         : "Please fix the validation errors";
 
     toast.error(message);
+  };
+
+  const toggleCategory = (category: ProductCategory) => {
+    const nextCategories = selectedCategories.includes(category)
+      ? selectedCategories.filter((item) => item !== category)
+      : [...selectedCategories, category];
+
+    setValue("productCategory", nextCategories, {
+      shouldValidate: true,
+      shouldDirty: true,
+      shouldTouch: true,
+    });
+  };
+
+  const existingProductImages = getProductImages(product);
+  const visibleProductImages = existingProductImages.filter(
+    (image) => !imagesToDelete.includes(image),
+  );
+
+  const toggleImageDelete = (image: string) => {
+    const nextImagesToDelete = imagesToDelete.includes(image)
+      ? imagesToDelete.filter((item) => item !== image)
+      : [...imagesToDelete, image];
+
+    if (
+      existingProductImages.length - nextImagesToDelete.length === 0 &&
+      selectedProductImages.length === 0
+    ) {
+      toast.error("Product must have at least one image");
+      return;
+    }
+
+    setValue("imagesToDelete", nextImagesToDelete, {
+      shouldValidate: true,
+      shouldDirty: true,
+      shouldTouch: true,
+    });
   };
 
   return (
@@ -139,24 +192,38 @@ export default function EditProductModal({
           <div className="grid gap-5 px-6 py-6 md:grid-cols-2">
             <div className="md:col-span-2">
               <label className="mb-2 block text-sm font-semibold text-[#334155]">
-                Product Image
+                Product Images
               </label>
               <div className="flex items-center gap-4 rounded-xl border border-[#CBD5E1] bg-[#F8FBFD] p-4">
-                <div
-                  role="img"
-                  aria-label={product.productName}
-                  className="h-20 w-20 shrink-0 rounded-xl border border-[#E2E8F0] bg-cover bg-center bg-no-repeat"
-                  style={{
-                    backgroundImage: `url(${getAssetUrl(product.productImage)})`,
-                  }}
-                />
+                <div className="grid shrink-0 grid-cols-3 gap-2">
+                  {visibleProductImages.map((image) => (
+                    <div key={image} className="relative">
+                      <div
+                        role="img"
+                        aria-label={product.productName}
+                        className="h-20 w-20 rounded-xl border border-[#E2E8F0] bg-cover bg-center bg-no-repeat"
+                        style={{
+                          backgroundImage: `url(${getAssetUrl(image)})`,
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => toggleImageDelete(image)}
+                        className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-[#DC2626] text-xs font-bold text-white"
+                        aria-label="Remove product image"
+                      >
+                        x
+                      </button>
+                    </div>
+                  ))}
+                </div>
                 <input
+                  key={`${product.productId}-${open ? "open" : "closed"}`}
                   type="file"
+                  multiple
                   accept="image/png,image/jpeg,image/webp"
                   onChange={(e) => {
-                    const file = e.target.files?.[0];
-
-                    setValue("productImage", file, {
+                    setValue("productImages", Array.from(e.target.files ?? []), {
                       shouldValidate: true,
                       shouldDirty: true,
                       shouldTouch: true,
@@ -165,8 +232,8 @@ export default function EditProductModal({
                   className="w-full cursor-pointer text-sm text-[#64748B] file:mr-4 file:rounded-lg file:border-0 file:bg-[#0089D3] file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white"
                 />
               </div>
-              {errors.productImage?.message && (
-                <InputError errorMessage={errors.productImage.message} />
+              {errors.productImages?.message && (
+                <InputError errorMessage={errors.productImages.message} />
               )}
             </div>
 
@@ -184,6 +251,18 @@ export default function EditProductModal({
 
             <div className="flex flex-col gap-1">
               <Input
+                register={register("productSubTitle")}
+                title="Product Subtitle"
+                type="text"
+                placeholder="Brightening night cream"
+              />
+              {errors.productSubTitle?.message && (
+                <InputError errorMessage={errors.productSubTitle.message} />
+              )}
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <Input
                 title="Price"
                 type="number"
                 step="0.01"
@@ -195,20 +274,32 @@ export default function EditProductModal({
               )}
             </div>
 
-            <div className="flex flex-col gap-1">
-              <CustomSelect<ProductCategory>
-                label="Category"
-                placeholder="Choose category"
-                options={categoryOptions}
-                value={selectedCategory}
-                onChange={(value) =>
-                  setValue("productCategory", value, {
-                    shouldValidate: true,
-                    shouldDirty: true,
-                    shouldTouch: true,
-                  })
-                }
-              />
+            <div className="md:col-span-2 flex flex-col gap-1">
+              <p className="mb-2 block text-sm font-semibold text-[#334155]">
+                Categories
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {categoryOptions.map((category) => {
+                  const isSelected = selectedCategories.includes(
+                    category.value,
+                  );
+
+                  return (
+                    <button
+                      key={category.value}
+                      type="button"
+                      onClick={() => toggleCategory(category.value)}
+                      className={`rounded-full border px-3 py-2 text-sm font-semibold transition ${
+                        isSelected
+                          ? "border-[#0089D3] bg-[#0089D3] text-white"
+                          : "border-[#CBD5E1] bg-white text-[#475569] hover:border-[#0089D3] hover:bg-[#F0F9FF]"
+                      }`}
+                    >
+                      {category.label}
+                    </button>
+                  );
+                })}
+              </div>
               {errors.productCategory?.message && (
                 <InputError errorMessage={errors.productCategory.message} />
               )}
@@ -266,6 +357,18 @@ export default function EditProductModal({
               />
               {errors.productStatus?.message && (
                 <InputError errorMessage={errors.productStatus.message} />
+              )}
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <Input
+                register={register("productShades")}
+                title="Product Shades"
+                type="text"
+                placeholder="#f4e7dd, #d8b99d, #7a513c"
+              />
+              {errors.productShades?.message && (
+                <InputError errorMessage={errors.productShades.message} />
               )}
             </div>
 

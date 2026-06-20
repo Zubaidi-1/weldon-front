@@ -2,7 +2,7 @@ import Image from "next/image";
 
 export default function Brand() {
   return (
-    <section className="w-full  px-5 sm:px-8 lg:px-10    min-h-screen">
+    <section className="flex min-h-screen w-full items-center px-5 py-20 sm:px-8 lg:px-10">
       <div className="mx-auto grid w-full max-w-7xl items-center gap-10 lg:grid-cols-[0.95fr_1.05fr] lg:gap-16">
         {/* LEFT: People Image */}
         <div className="relative mx-auto w-full max-w-md sm:max-w-xl lg:max-w-none">
@@ -19,7 +19,7 @@ export default function Brand() {
         </div>
 
         {/* RIGHT: Story Content */}
-        <div className="mx-auto flex w-full max-w-2xl flex-col items-center text-center lg:items-start lg:text-left">
+        <div className="mx-auto flex w-full max-w-3xl flex-col items-center text-center lg:items-start lg:text-left">
           <div className="mb-5 w-fit rounded-full border border-blue-100 bg-white px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-[#0089d3] shadow-sm">
             Our Story
           </div>
@@ -33,12 +33,12 @@ export default function Brand() {
             healthy skin. Who are we? Get to know us.
           </p>
 
-          <div className="mt-8 w-full border-y border-blue-100 py-7 sm:py-8">
-            <p className="font-serif text-2xl leading-snug text-gray-900 sm:text-3xl lg:text-4xl">
+          <div className="mt-8 flex w-full max-w-3xl flex-col items-center border-y border-blue-100 py-7 text-center sm:py-8">
+            <p className="max-w-3xl font-serif text-2xl leading-snug text-gray-900 sm:text-3xl lg:text-4xl">
               &quot;The symbiosis of medicine and cosmetics turns our products
               into highly-effective problem solvers.&quot;
             </p>
-            <p className="mt-4 text-sm leading-6 text-gray-500 sm:text-base">
+            <p className="mt-4 max-w-2xl text-sm leading-6 text-gray-500 sm:text-base">
               Beautiful skin significantly contributes to physical and
               psychological well-being.
             </p>

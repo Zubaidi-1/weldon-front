@@ -8,9 +8,14 @@ import type { GetMeResponse } from "@/Hooks/user/useGetMe";
 import { useGetMe } from "@/Hooks/user/useGetMe";
 import { useCreateOrder } from "@/Hooks/order/useCreateOrder";
 import {
+  type CouponPreview,
+  useValidateCoupon,
+} from "@/Hooks/discounts/useDiscounts";
+import {
   clearGuestCart,
   updateGuestCartItemQuantity,
 } from "@/lib/utils/guestCart";
+import { formatProductSize } from "@/lib/utils/productSize";
 import { CheckoutSchema, type CheckoutType } from "@/schemas/order.schema";
 import { jordanGovernates } from "@/lib/options/jordanGovernates";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -20,6 +25,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import toast from "react-hot-toast";
 import InputError from "@/components/shared/ui/InputError";
+import { useLanguage } from "@/Context/language/languageContext";
 
 type UpdateCartType = "INCREMENT" | "DECREMENT" | "REMOVE";
 
@@ -83,12 +89,14 @@ const updateCartItems = (
 };
 
 export default function CartPage() {
+  const { t } = useLanguage();
   const { cart, isLoading, isError, isSignedIn } = useCart();
   const queryClient = useQueryClient();
   const { accessToken } = useAuth();
   const { profile } = useProfile();
   const { data: user } = useGetMe();
   const createOrder = useCreateOrder();
+  const validateCoupon = useValidateCoupon();
   const {
     register,
     reset,
@@ -101,11 +109,18 @@ export default function CartPage() {
   });
   const [isSyncingCart, setIsSyncingCart] = useState(false);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
+  const [couponCode, setCouponCode] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState<CouponPreview | null>(
+    null,
+  );
   const isDirtyRef = useRef(false);
   const cartRef = useRef<CartView | null | undefined>(cart);
   const syncPromiseRef = useRef<Promise<void> | null>(null);
   const items = cart?.items ?? [];
   const isBusy = isCheckingOut || isSyncingCart || createOrder.isPending;
+  const couponDiscount = appliedCoupon?.couponDiscount ?? 0;
+  const cartTotal = Number(cart?.totalPrice ?? 0);
+  const finalTotal = Math.max(0, cartTotal - couponDiscount);
 
   useEffect(() => {
     cartRef.current = cart;
@@ -118,7 +133,12 @@ export default function CartPage() {
       shouldDirty: false,
       shouldValidate: false,
     });
-  }, [isSignedIn, setValue, user?.email]);
+
+    setValue("orderPhoneNumber", profile?.phoneNumber ?? "", {
+      shouldDirty: false,
+      shouldValidate: false,
+    });
+  }, [isSignedIn, profile?.phoneNumber, setValue, user?.email]);
 
   useEffect(() => {
     if (!profile) return;
@@ -262,10 +282,12 @@ export default function CartPage() {
     item: (typeof items)[number],
   ) => {
     if (!isSignedIn) {
+      setAppliedCoupon(null);
       updateGuestCartItemQuantity(item.productId, updateType);
       return;
     }
 
+    setAppliedCoupon(null);
     isDirtyRef.current = true;
 
     queryClient.setQueryData<CartView | null>(["cart"], (currentCart) => {
@@ -303,6 +325,41 @@ export default function CartPage() {
     });
   };
 
+  const handleApplyCoupon = async () => {
+    const code = couponCode.trim().toUpperCase();
+
+    if (!code) {
+      toast.error("Enter a coupon code");
+      return;
+    }
+
+    if (!cart || cart.items.length === 0) {
+      toast.error("Your cart is empty");
+      return;
+    }
+
+    try {
+      const preview = await validateCoupon.mutateAsync({
+        couponCode: code,
+        products: cart.items.map((item) => ({
+          productId: item.productId,
+          quantity: item.quantity,
+        })),
+      });
+
+      setAppliedCoupon(preview);
+      setCouponCode(preview.couponCode);
+      toast.success("Coupon applied");
+    } catch {
+      setAppliedCoupon(null);
+    }
+  };
+
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponCode("");
+  };
+
   const onCheckout = async (checkoutForm: CheckoutType) => {
     if (isBusy) return;
 
@@ -319,6 +376,7 @@ export default function CartPage() {
       await createOrder.mutateAsync(
         {
           ...checkoutForm,
+          couponCode: appliedCoupon?.couponCode,
           products: isSignedIn
             ? undefined
             : cart.items.map((item) => ({
@@ -341,6 +399,8 @@ export default function CartPage() {
             reset({
               ...checkoutForm,
               orderEmail: user?.email ?? checkoutForm.orderEmail,
+              orderPhoneNumber:
+                profile?.phoneNumber ?? checkoutForm.orderPhoneNumber,
             });
           },
         },
@@ -357,7 +417,9 @@ export default function CartPage() {
   if (isLoading) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-[#F8FBFD] px-4 py-24">
-        <p className="text-lg font-semibold text-[#64748B]">Loading cart...</p>
+        <p className="text-lg font-semibold text-[#64748B]">
+          {t("cart.loading")}
+        </p>
       </main>
     );
   }
@@ -366,7 +428,7 @@ export default function CartPage() {
     return (
       <main className="flex min-h-screen items-center justify-center bg-[#F8FBFD] px-4 py-24">
         <p className="text-lg font-semibold text-[#DC2626]">
-          Failed to load cart
+          {t("cart.failed")}
         </p>
       </main>
     );
@@ -377,31 +439,33 @@ export default function CartPage() {
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-7">
         <header className="flex flex-col gap-3 border-b border-[#D8EAF4] pb-6 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="text-sm font-semibold text-[#0089D3]">Cart</p>
+            <p className="text-sm font-semibold text-[#0089D3]">
+              {t("cart.eyebrow")}
+            </p>
             <h1 className="mt-2 text-3xl font-bold text-[#0F172A]">
-              Shopping Cart
+              {t("cart.title")}
             </h1>
           </div>
 
           <p className="text-sm font-semibold text-[#64748B]">
             {cart?.noOfItems ?? 0}{" "}
-            {(cart?.noOfItems ?? 0) === 1 ? "item" : "items"}
+            {(cart?.noOfItems ?? 0) === 1 ? t("cart.item") : t("cart.items")}
           </p>
         </header>
 
         {items.length === 0 ? (
           <section className="flex min-h-96 flex-col items-center justify-center rounded-2xl border border-dashed border-[#BFDCEB] bg-white p-8 text-center">
             <h2 className="text-2xl font-bold text-[#0F172A]">
-              Your cart is empty
+              {t("cart.emptyTitle")}
             </h2>
             <p className="mt-3 max-w-md text-sm leading-6 text-[#64748B]">
-              Browse the store and add your favorite products here.
+              {t("cart.emptyBody")}
             </p>
             <Link
               href="/store"
               className="mt-6 inline-flex h-11 items-center justify-center rounded-lg bg-[#0089D3] px-6 text-sm font-bold text-white transition hover:bg-[#007BBE]"
             >
-              Continue shopping
+              {t("cart.continueShopping")}
             </Link>
           </section>
         ) : (
@@ -432,7 +496,7 @@ export default function CartPage() {
                       {item.productName}
                     </h2>
                     <p className="mt-2 text-sm font-semibold text-[#64748B]">
-                      Size: {item.productSize}
+                      {t("cart.size")}: {formatProductSize(item.productSize)}
                     </p>
                     <div className="mt-4 flex flex-wrap items-center gap-3">
                       <div className="flex h-10 overflow-hidden rounded-lg border border-[#CBD5E1] bg-white">
@@ -472,14 +536,14 @@ export default function CartPage() {
                         disabled={isCheckingOut || createOrder.isPending}
                         className="text-sm font-bold text-red-600 transition hover:text-red-700 disabled:cursor-not-allowed disabled:text-red-300"
                       >
-                        Delete
+                        {t("cart.delete")}
                       </button>
                     </div>
                   </div>
 
                   <div className="flex items-center justify-between gap-4 sm:flex-col sm:items-end sm:justify-center">
                     <p className="text-sm font-semibold text-[#94A3B8]">
-                      ${Number(item.price).toFixed(2)} each
+                      ${Number(item.price).toFixed(2)} {t("cart.each")}
                     </p>
                     <p className="text-xl font-extrabold text-[#0089D3]">
                       $
@@ -496,10 +560,12 @@ export default function CartPage() {
               onSubmit={handleSubmit(onCheckout)}
               className="h-fit rounded-2xl border border-[#D8EAF4] bg-white p-5 shadow-[0_10px_28px_rgba(15,23,42,0.08)]"
             >
-              <h2 className="text-xl font-bold text-[#0F172A]">Summary</h2>
+              <h2 className="text-xl font-bold text-[#0F172A]">
+                {t("cart.summary")}
+              </h2>
               <div className="mt-5 flex items-center justify-between border-b border-[#E2E8F0] pb-4">
                 <span className="text-sm font-semibold text-[#64748B]">
-                  Items
+                  {t("cart.items")}
                 </span>
                 <span className="text-sm font-bold text-[#0F172A]">
                   {cart?.noOfItems ?? 0}
@@ -507,11 +573,59 @@ export default function CartPage() {
               </div>
               <div className="mt-4 flex items-center justify-between">
                 <span className="text-base font-bold text-[#0F172A]">
-                  Total
+                  {t("cart.total")}
                 </span>
                 <span className="text-2xl font-extrabold text-[#0089D3]">
-                  ${Number(cart?.totalPrice ?? 0).toFixed(2)}
+                  ${finalTotal.toFixed(2)}
                 </span>
+              </div>
+              {appliedCoupon && (
+                <div className="mt-2 flex items-center justify-between text-sm">
+                  <span className="font-semibold text-[#16A34A]">
+                    {appliedCoupon.couponCode}
+                  </span>
+                  <span className="font-bold text-[#16A34A]">
+                    -${couponDiscount.toFixed(2)}
+                  </span>
+                </div>
+              )}
+
+              <div className="mt-5 rounded-xl border border-[#D8EAF4] bg-[#F8FBFD] p-3">
+                <label className="block text-sm font-semibold text-[#334155]">
+                  {t("cart.couponCode")}
+                </label>
+                <div className="mt-2 flex gap-2">
+                  <input
+                    value={couponCode}
+                    onChange={(event) => {
+                      setCouponCode(event.target.value.toUpperCase());
+                      setAppliedCoupon(null);
+                    }}
+                    placeholder="SKIN10"
+                    disabled={isBusy || validateCoupon.isPending}
+                    className="min-w-0 flex-1 rounded-lg border border-[#CBD5E1] px-3 py-2 text-sm font-bold uppercase text-[#0F172A] outline-none transition placeholder:text-[#94A3B8] focus:border-[#0089D3] focus:ring-4 focus:ring-[#0089D3]/10 disabled:cursor-not-allowed disabled:bg-white"
+                  />
+                  {appliedCoupon ? (
+                    <button
+                      type="button"
+                      onClick={handleRemoveCoupon}
+                      className="rounded-lg border border-[#CBD5E1] bg-white px-3 text-sm font-bold text-[#475569] transition hover:bg-[#F1F5F9]"
+                    >
+                      {t("cart.remove")}
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={handleApplyCoupon}
+                      disabled={isBusy || validateCoupon.isPending}
+                      className="rounded-lg bg-[#0F172A] px-3 text-sm font-bold text-white transition hover:bg-[#1E293B] disabled:cursor-not-allowed disabled:bg-[#94A3B8]"
+                    >
+                      {validateCoupon.isPending
+                        ? t("cart.checking")
+                        : t("cart.apply")}
+                    </button>
+                  )}
+                </div>
               </div>
 
               <div className="mt-5 flex flex-col gap-3">
@@ -521,7 +635,7 @@ export default function CartPage() {
                       <input type="hidden" {...register("orderEmail")} />
                       <input
                         value={user?.email ?? ""}
-                        placeholder="Email"
+                        placeholder={t("cart.email")}
                         disabled
                         className="h-11 w-full cursor-not-allowed rounded-lg border border-[#CBD5E1] bg-[#F8FAFC] px-3 text-sm font-semibold text-[#64748B] outline-none"
                       />
@@ -529,7 +643,7 @@ export default function CartPage() {
                   ) : (
                     <input
                       {...register("orderEmail")}
-                      placeholder="Email"
+                      placeholder={t("cart.email")}
                       className="h-11 w-full rounded-lg border border-[#CBD5E1] px-3 text-sm font-semibold text-[#0F172A] outline-none transition placeholder:text-[#94A3B8] focus:border-[#0089D3] focus:ring-4 focus:ring-[#0089D3]/10"
                     />
                   )}
@@ -540,7 +654,7 @@ export default function CartPage() {
                 <div>
                   <input
                     {...register("orderFirstName")}
-                    placeholder="First name"
+                    placeholder={t("cart.firstName")}
                     className="h-11 w-full rounded-lg border border-[#CBD5E1] px-3 text-sm font-semibold text-[#0F172A] outline-none transition placeholder:text-[#94A3B8] focus:border-[#0089D3] focus:ring-4 focus:ring-[#0089D3]/10"
                   />
                   {errors.orderFirstName?.message && (
@@ -550,7 +664,7 @@ export default function CartPage() {
                 <div>
                   <input
                     {...register("orderLastName")}
-                    placeholder="Last name"
+                    placeholder={t("cart.lastName")}
                     className="h-11 w-full rounded-lg border border-[#CBD5E1] px-3 text-sm font-semibold text-[#0F172A] outline-none transition placeholder:text-[#94A3B8] focus:border-[#0089D3] focus:ring-4 focus:ring-[#0089D3]/10"
                   />
                   {errors.orderLastName?.message && (
@@ -558,11 +672,23 @@ export default function CartPage() {
                   )}
                 </div>
                 <div>
-                  <input
-                    {...register("orderPhoneNumber")}
-                    placeholder="Phone number"
-                    className="h-11 w-full rounded-lg border border-[#CBD5E1] px-3 text-sm font-semibold text-[#0F172A] outline-none transition placeholder:text-[#94A3B8] focus:border-[#0089D3] focus:ring-4 focus:ring-[#0089D3]/10"
-                  />
+                  {isSignedIn ? (
+                    <>
+                      <input type="hidden" {...register("orderPhoneNumber")} />
+                      <input
+                        value={profile?.phoneNumber ?? ""}
+                        placeholder={t("cart.phone")}
+                        disabled
+                        className="h-11 w-full cursor-not-allowed rounded-lg border border-[#CBD5E1] bg-[#F8FAFC] px-3 text-sm font-semibold text-[#64748B] outline-none"
+                      />
+                    </>
+                  ) : (
+                    <input
+                      {...register("orderPhoneNumber")}
+                      placeholder={t("cart.phone")}
+                      className="h-11 w-full rounded-lg border border-[#CBD5E1] px-3 text-sm font-semibold text-[#0F172A] outline-none transition placeholder:text-[#94A3B8] focus:border-[#0089D3] focus:ring-4 focus:ring-[#0089D3]/10"
+                    />
+                  )}
                   {errors.orderPhoneNumber?.message && (
                     <InputError
                       errorMessage={errors.orderPhoneNumber.message}
@@ -574,7 +700,7 @@ export default function CartPage() {
                     {...register("orderGovernate")}
                     className="h-11 w-full rounded-lg border border-[#CBD5E1] px-3 text-sm font-semibold text-[#0F172A] outline-none transition placeholder:text-[#94A3B8] focus:border-[#0089D3] focus:ring-4 focus:ring-[#0089D3]/10"
                   >
-                    <option value="">Select governate</option>
+                    <option value="">{t("cart.selectGovernate")}</option>
                     {jordanGovernates.map((governate) => (
                       <option key={governate} value={governate}>
                         {governate}
@@ -588,7 +714,7 @@ export default function CartPage() {
                 <div>
                   <textarea
                     {...register("orderAddress")}
-                    placeholder="Delivery address"
+                    placeholder={t("cart.address")}
                     className="min-h-24 w-full resize-none rounded-lg border border-[#CBD5E1] px-3 py-3 text-sm font-semibold text-[#0F172A] outline-none transition placeholder:text-[#94A3B8] focus:border-[#0089D3] focus:ring-4 focus:ring-[#0089D3]/10"
                   />
                   {errors.orderAddress?.message && (
@@ -603,10 +729,10 @@ export default function CartPage() {
                 className="mt-5 inline-flex h-12 w-full items-center justify-center rounded-lg bg-[#0089D3] text-sm font-bold text-white shadow-[0_12px_24px_rgba(0,137,211,0.22)] transition hover:bg-[#007BBE] disabled:cursor-not-allowed disabled:bg-[#94A3B8]"
               >
                 {isCheckingOut || createOrder.isPending
-                  ? "Placing order..."
+                  ? t("cart.placingOrder")
                   : isSyncingCart
-                    ? "Saving cart..."
-                    : "Checkout"}
+                    ? t("cart.savingCart")
+                    : t("cart.checkout")}
               </button>
             </form>
           </div>

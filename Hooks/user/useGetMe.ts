@@ -1,4 +1,5 @@
 "use client";
+import { useAuth } from "@/Context/auth/authContext";
 import { getApiUrl } from "@/config/api";
 import { useQuery } from "@tanstack/react-query";
 import { useApi } from "../api/useApi";
@@ -10,14 +11,21 @@ export type GetMeResponse = {
   lastName: string | null;
   name: string | null;
   roleName: "GUEST" | "USER" | "ADMIN" | string;
+  isBanned: boolean;
   cartProductsCount: number;
 };
 
-export const useGetMe = () => {
+type UseGetMeOptions = {
+  enabled?: boolean;
+};
+
+export const useGetMe = (options?: UseGetMeOptions) => {
   const api = useApi();
+  const { isReady } = useAuth();
 
   return useQuery<GetMeResponse>({
     queryKey: ["get-me"],
+    enabled: options?.enabled ?? isReady,
     staleTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false,
 

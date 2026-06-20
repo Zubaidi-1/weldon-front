@@ -19,16 +19,25 @@ export const useUpdateProduct = () => {
       const formData = new FormData();
 
       formData.append("productName", data.productName);
+      formData.append("productSubTitle", data.productSubTitle ?? "");
       formData.append("productDescription", data.productDescription);
       formData.append("productPrice", String(data.productPrice));
       formData.append("productSize", String(data.productSize));
-      formData.append("productCategory", data.productCategory);
+      formData.append("productCategory", JSON.stringify(data.productCategory));
       formData.append("productStatus", data.productStatus);
       formData.append("productSku", data.productSku);
       formData.append("stockQuantity", String(data.stockQuantity));
 
-      if (data.productImage) {
-        formData.append("productImage", data.productImage);
+      data.productImages?.forEach((productImage) => {
+        formData.append("productImages", productImage);
+      });
+
+      if (data.imagesToDelete?.length) {
+        formData.append("imagesToDelete", JSON.stringify(data.imagesToDelete));
+      }
+
+      if (data.productShades?.length) {
+        formData.append("productShades", JSON.stringify(data.productShades));
       }
 
       const response = await api(getApiUrl(`/product/update-product/${productId}`), {

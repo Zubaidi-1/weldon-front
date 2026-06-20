@@ -2,6 +2,8 @@ import DeleteIcon from "@/components/svg/Delete";
 import EditIcon from "@/components/svg/Edit";
 import { useDeleteProduct } from "@/Hooks/products/useDeleteProduct";
 import { Product, ProductStatus } from "@/lib/types/ProductTypes";
+import { formatProductSize } from "@/lib/utils/productSize";
+import { formatCategoryLabels } from "@/lib/utils/productCategories";
 import Link from "next/link";
 
 type ProductsTableProps = {
@@ -9,6 +11,7 @@ type ProductsTableProps = {
   getProductStatus: (product: Product) => ProductStatus;
   onEdit?: (product: Product) => void;
   showActions?: boolean;
+  totalProducts?: number;
 };
 
 export default function ProductsTable({
@@ -16,6 +19,7 @@ export default function ProductsTable({
   getProductStatus,
   onEdit,
   showActions = true,
+  totalProducts = products.length,
 }: ProductsTableProps) {
   const { mutate, isPending } = useDeleteProduct();
 
@@ -26,7 +30,7 @@ export default function ProductsTable({
           <h2 className="text-xl font-bold text-[#0F172A]">All Products</h2>
 
           <p className="mt-1 text-sm text-[#64748B]">
-            {products.length} products found
+            {totalProducts} products found
           </p>
         </div>
 
@@ -108,7 +112,14 @@ export default function ProductsTable({
                   </td>
 
                   <td className="px-6 py-4 text-sm font-semibold text-[#0F172A]">
-                    {product.productName}
+                    <div>
+                      <p>{product.productName}</p>
+                      {product.productSubTitle && (
+                        <p className="mt-1 text-xs font-medium text-[#64748B]">
+                          {product.productSubTitle}
+                        </p>
+                      )}
+                    </div>
                   </td>
 
                   <td className="px-6 py-4 text-sm font-medium text-[#334155]">
@@ -116,7 +127,7 @@ export default function ProductsTable({
                   </td>
 
                   <td className="px-6 py-4 text-sm font-medium text-[#334155]">
-                    {product.productCategory}
+                    {formatCategoryLabels(product.productCategory)}
                   </td>
 
                   <td className="px-6 py-4 text-sm font-medium text-[#334155]">
@@ -124,7 +135,7 @@ export default function ProductsTable({
                   </td>
 
                   <td className="px-6 py-4 text-sm font-medium text-[#334155]">
-                    {product.productSize}
+                    {formatProductSize(product.productSize)}
                   </td>
 
                   <td className="px-6 py-4">

@@ -7,6 +7,7 @@ export type OrderStatus =
 
 export type OrderProduct = {
   cartItemId: number;
+  orderItemId?: number;
   productId: number;
   productName: string;
   productImage: string | null;
@@ -14,6 +15,19 @@ export type OrderProduct = {
   quantity: number;
   size: number;
   lineTotal: number;
+};
+
+export type UserOrderProduct = {
+  id: number;
+  orderLineId: number;
+  productId: number;
+  productName: string;
+  productImage: string | null;
+  productPrice: number | string;
+  productSize: number;
+  quantity: number;
+  createdAt: string;
+  updatedAt: string;
 };
 
 export type Order = {
@@ -32,9 +46,20 @@ export type Order = {
   updatedAt: string;
 };
 
+export type UserOrder = Omit<Order, "products"> & {
+  orderLine: {
+    id: number;
+    orderId: number;
+    products: UserOrderProduct[];
+    createdAt: string;
+    updatedAt: string;
+  } | null;
+};
+
 export type PaginatedOrders = {
   orders: Order[];
   total: number;
   page: number;
+  limit: number;
   totalPages: number;
 };
