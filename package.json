@@ -31,5 +31,11 @@
     "eslint-config-next": "16.2.4",
     "tailwindcss": "^4",
     "typescript": "^5"
+  },
+  "allowScripts": {
+    "@parcel/watcher@2.5.6": true,
+    "sharp@0.34.5": true,
+    "@swc/core@1.15.32": true,
+    "unrs-resolver@1.11.1": true
   }
 }
